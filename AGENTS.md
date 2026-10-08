@@ -7,7 +7,7 @@ The system finds and cites the relevant provisions for a question. It does not g
 
 ## Corpus (version 1)
 
-English only. Source: EUR-Lex exclusively (eur-lex.europa.eu), HTML format.
+English only. Source: EUR-Lex exclusively (eur-lex.europa.eu), PDF format.
 
 | Act | Reference | CELEX |
 |---|---|---|
