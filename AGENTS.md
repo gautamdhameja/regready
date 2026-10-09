@@ -5,6 +5,13 @@
 A retrieval system over five EU digital regulations, with a evaluation comparing three ways of answering questions.
 The system finds and cites the relevant provisions for a question. It does not give legal advice and must never present output as legal advice.
 
+## Audience
+
+- Primary: technical and product teams (engineers, product managers, security leads). They ask in plain language about their own situation and rarely know article numbers.
+- Secondary: compliance and legal staff. They ask with legal terms and exact identifiers.
+
+Write eval questions mainly in the primary audience's words. Use `identifier` questions to cover the secondary audience.
+
 ## Corpus (version 1)
 
 English only. Source: EUR-Lex exclusively (eur-lex.europa.eu), PDF format.
@@ -23,6 +30,7 @@ Versioning rules:
 - GDPR and Data Act amendments under the broader Digital Omnibus were still in negotiation as of August 2026. Index current texts and record that they may change.
 - Consolidated EUR-Lex texts are documentation, not legally binding. Note this in the corpus record.
 - Every document carries: source URL, original or consolidated, version date, download date.
+- The consolidated AI Act and GDPR texts contain no recitals. Version 1 accepts this gap. Recital-based questions apply only to DORA, NIS2 and the Data Act.
 
 Out of scope for version 1: official guidance (EDPB, Commission guidelines), case law, national implementing laws, other languages.
 

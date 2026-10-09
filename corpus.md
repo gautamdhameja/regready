@@ -24,6 +24,7 @@ For consolidated texts, the version date is the date in the consolidated CELEX n
 - Consolidated version 001.001, dated 27 July 2026.
 - Includes amendment M1: Regulation (EU) 2026/1744 of 8 July 2026 (the Digital Omnibus on AI), OJ L 1744, 24 July 2026.
 - Original text: OJ L 1689, 12 July 2024.
+- Contains no recitals. The consolidated text has articles and annexes only.
 
 ### GDPR
 
@@ -31,6 +32,7 @@ For consolidated texts, the version date is the date in the consolidated CELEX n
 - Consolidated version 000.002, dated 4 May 2016.
 - No amendments. Includes corrigendum C1, OJ L 127, 23 May 2018, p. 2.
 - Original text: OJ L 119, 4 May 2016, p. 1.
+- Contains no recitals. The consolidated text has articles only.
 - Digital Omnibus changes to the GDPR were still in negotiation as of August 2026. This text may change.
 
 ### DORA
@@ -54,3 +56,7 @@ For consolidated texts, the version date is the date in the consolidated CELEX n
 ## Legal status
 
 Consolidated texts are documentation tools only and have no legal effect. Each consolidated PDF says so on its first page. The authentic versions are the acts published in the Official Journal.
+
+## Known gaps
+
+- The consolidated AI Act and GDPR texts contain no recitals. Version 1 accepts this gap. Recital-based questions apply only to DORA, NIS2 and the Data Act.
