@@ -1,0 +1,274 @@
+# Eval questions. Format: see README.md in this directory.
+
+# --- lookup ---
+
+[[questions]]
+id = "q001"
+type = "lookup"
+question = "We're adding an AI chat assistant to our app. Do we have to tell users they're talking to an AI?"
+gold = [
+  { act = "ai_act", unit = "article", number = "50", paragraph = "1" },
+]
+short_answer = "Yes, unless it's already obvious to users that they're talking to an AI."
+full_answer = "Providers must design AI systems that interact directly with people so that those people are informed they are interacting with an AI system. This does not apply where it is obvious to a reasonably well-informed, observant and circumspect person, given the circumstances and context of use."
+notes = "Plain-language wording avoids 'interact directly with natural persons'. The duty is on providers. Under Article 3(3), a company that puts the assistant into service under its own name is a provider, even if it did not build the model."
+
+[[questions]]
+id = "q002"
+type = "lookup"
+question = "We had a database leak with customer emails in it. How fast do we have to report it, and to whom?"
+gold = [
+  { act = "gdpr", unit = "article", number = "33", paragraph = "1" },
+]
+short_answer = "Within 72 hours, to your data protection authority."
+full_answer = "The controller must notify the competent supervisory authority without undue delay and, where feasible, not later than 72 hours after becoming aware of the breach. Notification is not needed if the breach is unlikely to result in a risk to people's rights and freedoms. A notification made after 72 hours must give the reasons for the delay."
+
+[[questions]]
+id = "q003"
+type = "lookup"
+question = "A customer wants all the data our smart thermostat collects about them. Do we have to give it?"
+gold = [
+  { act = "data_act", unit = "article", number = "4", paragraph = "1" },
+]
+short_answer = "Yes, free of charge, if they can't get it directly from the device."
+full_answer = "Where the user cannot access the data directly from the connected product or related service, the data holder must make readily available data and the metadata needed to interpret it accessible to the user. This must happen without undue delay, free of charge, in a structured, commonly used and machine-readable format, and where feasible continuously and in real time."
+notes = "Article 3(1) is a product design duty, not the user's right to the data. It is not needed for this answer, so it is not gold."
+
+[[questions]]
+id = "q004"
+type = "lookup"
+question = "We want to use a tool that reads employees' emotions from their webcam during meetings. Is that allowed?"
+gold = [
+  { act = "ai_act", unit = "article", number = "5", paragraph = "1", point = "f" },
+]
+short_answer = "No. It's banned, unless it's for medical or safety reasons."
+full_answer = "Placing on the market, putting into service for this purpose, or using AI systems to infer the emotions of people in the workplace or in education institutions is a prohibited practice. The exception is AI systems intended for medical or safety reasons."
+notes = "Point (f) sits in the first subparagraph of Article 5(1)."
+
+# --- definition ---
+
+[[questions]]
+id = "q005"
+type = "definition"
+question = "We replace user names with random IDs. Is that still personal data?"
+gold = [
+  { act = "gdpr", unit = "article", number = "4", paragraph = "1" },
+  { act = "gdpr", unit = "article", number = "4", paragraph = "5" },
+]
+short_answer = "Yes. It's still personal data."
+full_answer = "Replacing names with IDs is pseudonymisation: the data can no longer be linked to a person without additional information that is kept separately. The data still relates to a person who can be identified with that additional information, so it remains personal data under the GDPR."
+notes = "Recital 26 states this directly, but the consolidated GDPR has no recitals. The answer must be inferred from the articles."
+
+[[questions]]
+id = "q006"
+type = "definition"
+question = "What counts as a 'deployer' if we only use an AI tool we bought?"
+gold = [
+  { act = "ai_act", unit = "article", number = "3", paragraph = "4" },
+]
+short_answer = "You are a deployer: anyone who uses an AI system for professional purposes."
+full_answer = "A deployer is a natural or legal person, public authority, agency or other body using an AI system under its authority, except where the AI system is used in the course of a personal non-professional activity."
+notes = "Article 3 uses numbered definitions. Definition number is treated as the paragraph."
+
+[[questions]]
+id = "q007"
+type = "definition"
+question = "What does 'related service' mean for a connected device?"
+gold = [
+  { act = "data_act", unit = "article", number = "2", paragraph = "6" },
+]
+short_answer = "Software or a digital service the device needs to work, or that later adds to or updates its features."
+full_answer = "A related service is a digital service, other than an electronic communications service, including software, connected with the product at the time of purchase, rent or lease so that its absence would prevent the product from performing one or more functions. It also covers services later connected by the manufacturer or a third party to add to, update or adapt the product's functions."
+
+# --- identifier ---
+
+[[questions]]
+id = "q008"
+type = "identifier"
+question = "What does Annex III of the AI Act cover?"
+gold = [
+  { act = "ai_act", unit = "annex", number = "III" },
+]
+short_answer = "The list of uses that make an AI system high-risk, such as hiring, education and credit scoring."
+full_answer = "Annex III lists the high-risk AI systems referred to in Article 6(2), grouped in eight areas: biometrics; critical infrastructure; education and vocational training; employment and workers' management; access to essential private and public services; law enforcement; migration, asylum and border control; and administration of justice and democratic processes."
+
+[[questions]]
+id = "q009"
+type = "identifier"
+question = "What does Article 21 of NIS2 require?"
+gold = [
+  { act = "nis2", unit = "article", number = "21", paragraph = "1" },
+  { act = "nis2", unit = "article", number = "21", paragraph = "2" },
+]
+short_answer = "Appropriate cybersecurity measures, including at least ten listed basics such as incident handling, backups, supply chain security and multi-factor authentication."
+full_answer = "Member States must ensure that essential and important entities take appropriate and proportionate technical, operational and organisational measures to manage risks to their network and information systems. Paragraph 2 lists minimum measures: risk analysis and security policies, incident handling, business continuity, supply chain security, secure development and vulnerability handling, effectiveness assessment, cyber hygiene and training, cryptography, human resources security and access control, and multi-factor authentication."
+notes = "Directive: obligations reach companies through national law."
+
+[[questions]]
+id = "q010"
+type = "identifier"
+question = "Summarise GDPR Article 22."
+gold = [
+  { act = "gdpr", unit = "article", number = "22" },
+]
+short_answer = "People have the right not to be subject to fully automated decisions that significantly affect them, with some exceptions."
+full_answer = "A data subject has the right not to be subject to a decision based solely on automated processing, including profiling, that produces legal effects or similarly significantly affects them. This does not apply where the decision is necessary for a contract, authorised by law, or based on explicit consent. In the contract and consent cases, the controller must provide safeguards, at least the right to human intervention, to express a view and to contest the decision. Such decisions must not be based on special category data unless limited conditions apply."
+notes = "Whole-article gold, because the question asks for a summary."
+
+# --- version ---
+
+[[questions]]
+id = "q011"
+type = "version"
+question = "When do the high-risk rules start applying to our CV-screening tool?"
+gold = [
+  { act = "ai_act", unit = "article", number = "113", point = "c" },
+  { act = "ai_act", unit = "annex", number = "III", paragraph = "4", point = "a" },
+]
+short_answer = "2 December 2027."
+full_answer = "AI systems used for recruitment or selection, including filtering job applications, are high-risk under Annex III point 4(a). The high-risk requirements in Chapter III, Sections 1 to 3, apply to Annex III high-risk systems from 2 December 2027."
+as_of = "2026-07-27"
+notes = "Sub-point (i) of Article 113 point (c). Date set by the Digital Omnibus on AI."
+
+[[questions]]
+id = "q012"
+type = "version"
+question = "Did the recent AI Act changes add any new banned uses?"
+gold = [
+  { act = "ai_act", unit = "article", number = "5", paragraph = "1", point = "ba" },
+  { act = "ai_act", unit = "article", number = "5", paragraph = "1", point = "bb" },
+  { act = "ai_act", unit = "article", number = "5", paragraph = "1a" },
+  { act = "ai_act", unit = "article", number = "113", point = "a" },
+]
+short_answer = "Yes, two: AI-generated intimate images of real people without their consent, and AI-generated child sexual abuse material. Both are banned from 2 December 2026."
+full_answer = "The Digital Omnibus on AI added two prohibited practices to Article 5(1). Point (ba) bans AI systems that generate or manipulate realistic intimate or sexually explicit images, video or audio of an identifiable person without their consent. Point (bb) bans AI systems that generate or manipulate material within the meaning of Article 2, points (c) and (e), of Directive 2011/93/EU. Under Article 5(1a), placing such a system on the market is only prohibited where that output is its intended purpose, or a foreseeable and reproducible outcome without adequate safeguards. Using such a system is only prohibited where the deployer uses it to generate that material. Both bans apply from 2 December 2026."
+as_of = "2026-07-27"
+notes = "The corpus does not include Directive 2011/93/EU. 'Child sexual abuse material' in the short answer comes from that directive's subject, not from corpus text. Do not penalise an answer that cites the directive without naming its subject."
+
+[[questions]]
+id = "q013"
+type = "version"
+question = "Can our cloud provider still charge us to switch providers in 2027?"
+gold = [
+  { act = "data_act", unit = "article", number = "29", paragraph = "1" },
+]
+short_answer = "No. Switching charges are banned from 12 January 2027."
+full_answer = "From 12 January 2027, providers of data processing services must not impose any switching charges on the customer for the switching process."
+
+[[questions]]
+id = "q014"
+type = "version"
+question = "Does the Data Act's design-for-access rule apply to devices we already sell?"
+gold = [
+  { act = "data_act", unit = "article", number = "50" },
+]
+short_answer = "No. It only applies to devices first put on the market after 12 September 2026."
+full_answer = "The obligation in Article 3(1) applies to connected products and related services placed on the market after 12 September 2026. Products placed on the market before that date are not covered by it."
+notes = "Article 50 has unnumbered paragraphs. Gold is the whole article."
+
+[[questions]]
+id = "q015"
+type = "version"
+question = "Can we use sensitive personal data like ethnicity to test our model for bias?"
+gold = [
+  { act = "ai_act", unit = "article", number = "4a", paragraph = "1" },
+]
+short_answer = "Yes, but only for high-risk AI systems, only when strictly necessary, and with safeguards."
+full_answer = "To the extent strictly necessary for bias detection and correction in high-risk AI systems under Article 10(2), points (f) and (g), providers may exceptionally process special categories of personal data. Appropriate safeguards are required, and all conditions listed in Article 4a must be met, in addition to the GDPR."
+as_of = "2026-07-27"
+notes = "Article 4a was inserted by the Digital Omnibus on AI. Also a cross-act candidate with GDPR Article 9."
+
+# --- cross_act ---
+
+[[questions]]
+id = "q016"
+type = "cross_act"
+question = "We're a bank. Do we report cyber incidents under NIS2 or DORA?"
+gold = [
+  { act = "nis2", unit = "article", number = "4", paragraph = "1" },
+  { act = "dora", unit = "article", number = "1", paragraph = "2" },
+  { act = "dora", unit = "article", number = "19", paragraph = "1" },
+]
+short_answer = "DORA."
+full_answer = "DORA counts as a sector-specific Union legal act for the purposes of NIS2 Article 4. Where such an act sets requirements at least equivalent to NIS2, the corresponding NIS2 provisions do not apply. Financial entities report major ICT-related incidents to their competent authority under DORA Article 19."
+
+[[questions]]
+id = "q017"
+type = "cross_act"
+question = "Our AI hiring tool rejects candidates automatically. Which rules apply?"
+gold = [
+  { act = "ai_act", unit = "article", number = "6", paragraph = "2" },
+  { act = "ai_act", unit = "annex", number = "III", paragraph = "4", point = "a" },
+  { act = "gdpr", unit = "article", number = "22", paragraph = "1" },
+  { act = "gdpr", unit = "article", number = "22", paragraph = "2" },
+]
+short_answer = "Two sets: the AI Act's high-risk rules, and the GDPR's rules on fully automated decisions."
+full_answer = "AI systems used for recruitment or selection are high-risk under AI Act Article 6(2) and Annex III point 4(a). Under GDPR Article 22(1), candidates have the right not to be subject to a decision based solely on automated processing that significantly affects them. Article 22(2) allows such decisions where necessary for a contract, authorised by law, or based on explicit consent."
+notes = "Article 6(3) lets some Annex III systems escape high-risk status, but not systems that profile people. Automatic candidate rejection profiles people, so 6(3) is not gold."
+
+[[questions]]
+id = "q018"
+type = "cross_act"
+question = "We had a security incident that also exposed personal data. What are the different reporting deadlines?"
+gold = [
+  { act = "gdpr", unit = "article", number = "33", paragraph = "1" },
+  { act = "nis2", unit = "article", number = "23", paragraph = "4", point = "a" },
+  { act = "nis2", unit = "article", number = "23", paragraph = "4", point = "b" },
+  { act = "nis2", unit = "article", number = "23", paragraph = "4", point = "d" },
+]
+short_answer = "GDPR: 72 hours. NIS2 (if you're in scope): 24 hours for an early warning, 72 hours for a full notification, and a final report within one month."
+full_answer = "Under GDPR Article 33(1), notify the supervisory authority without undue delay and, where feasible, within 72 hours. If the entity is in scope of NIS2, national law under Article 23(4) requires an early warning within 24 hours, an incident notification within 72 hours, and a final report no later than one month after the incident notification."
+notes = "NIS2 deadlines apply through national law. The answer should say so."
+
+[[questions]]
+id = "q019"
+type = "cross_act"
+question = "Does the Data Act override the GDPR when users request device data?"
+gold = [
+  { act = "data_act", unit = "article", number = "1", paragraph = "5" },
+]
+short_answer = "No. If they conflict, the GDPR wins."
+full_answer = "The Data Act is without prejudice to Union and national data protection law. Its access rights complement the GDPR rights of access and data portability. In a conflict, the relevant data protection law prevails."
+
+# --- unanswerable ---
+
+[[questions]]
+id = "q020"
+type = "unanswerable"
+question = "Is our chatbot compliant with the AI Act?"
+gold = []
+short_answer = "This tool can't decide that. It can show you the relevant rules."
+full_answer = "The corpus cannot give a compliance verdict. The system may point to relevant provisions, such as Article 50, but must not rule on compliance."
+notes = "Tests the no-legal-advice rule."
+
+[[questions]]
+id = "q021"
+type = "unanswerable"
+question = "What does German law add to NIS2?"
+gold = []
+short_answer = "Not covered. The corpus has no national laws."
+full_answer = "The corpus does not include national implementing laws."
+
+[[questions]]
+id = "q022"
+type = "unanswerable"
+question = "How have regulators fined companies for GDPR breaches?"
+gold = []
+short_answer = "Not covered. The corpus has no enforcement decisions."
+full_answer = "The corpus does not include enforcement decisions or case law."
+
+[[questions]]
+id = "q023"
+type = "unanswerable"
+question = "What does the EDPB say about legitimate interest?"
+gold = []
+short_answer = "Not covered. The corpus has no official guidance."
+full_answer = "The corpus does not include EDPB or other official guidance."
+
+[[questions]]
+id = "q024"
+type = "unanswerable"
+question = "What are the rules in the new Digital Omnibus for the GDPR?"
+gold = []
+short_answer = "Not covered. Those changes were still being negotiated."
+full_answer = "The GDPR changes under the Digital Omnibus were still in negotiation and are not in the corpus."
