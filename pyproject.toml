@@ -7,7 +7,9 @@ authors = [
     { name = "Gautam Dhameja", email = "gautamdhameja@users.noreply.github.com" }
 ]
 requires-python = ">=3.13"
-dependencies = []
+dependencies = [
+    "docling>=2.137.0",
+]
 
 [project.scripts]
 regready = "regready:main"
