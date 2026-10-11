@@ -10,7 +10,8 @@ Each item is a dict with these keys:
 Cleaning steps:
   1. Walk the document tree in reading order. Skip page headers, footers
      and stray page stamps.
-  2. Remove consolidation markers (▼B, ▼M1, ►B) and soft hyphens.
+  2. Remove consolidation markers (▼B, ▼M1, ►B), soft hyphens and rule
+     lines. Label footnotes that docling missed.
   3. Join an item that continues a sentence across a page break onto the
      item before it.
 
@@ -43,6 +44,13 @@ PAGE_STAMP = re.compile(
 # Some page stamps stay in the body as separate items, such as "EN" or
 # "27.12.2022". Only exact matches are dropped, so real text is never lost.
 BODY_STAMP = re.compile(r"^(EN )?(EN|L \d+/\d+|\d{1,2}\.\d{1,2}\.\d{4})$")
+
+# Footnotes use a spaced marker, "( 1 )", or "(*)" in amending articles.
+# Points never have spaces inside the brackets, so the rule is safe.
+FOOTNOTE = re.compile(r"^\(\s+\d+\s+\)|^\(\*\)")
+
+# Amending articles separate quoted text from its footnotes with a rule line.
+SEPARATOR = re.compile(r"^_{3,}$")
 
 
 def resolve(doc: dict, ref: str) -> dict:
@@ -90,10 +98,14 @@ def clean(doc: dict) -> tuple[list[dict], list[dict]]:
             text = table_text(node)
         else:
             text = clean_text(node["text"])
-        if not text or BODY_STAMP.match(text):
-            continue  # the item held only a consolidation marker or a page stamp
+        if not text or BODY_STAMP.match(text) or SEPARATOR.match(text):
+            continue  # a consolidation marker, page stamp or rule line only
 
         item = {"label": node["label"], "text": text, "marker": node.get("marker", ""), "page": page}
+
+        # Docling misses some footnotes. Their spaced marker identifies them.
+        if FOOTNOTE.match(f"{item['marker']} {text}".strip()):
+            item["label"] = "footnote"
 
         # A body item that starts in lower case on a new page continues the
         # sentence from the previous page. Footnotes sit between the two parts.
