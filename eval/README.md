@@ -39,6 +39,7 @@ Each gold citation is a table with these fields:
 | `act` | Yes | `ai_act`, `gdpr`, `dora`, `nis2`, `data_act` |
 | `unit` | Yes | `article`, `recital`, `annex` |
 | `number` | Yes | The unit number as a string, such as `"4"`, `"60a"` or `"III"`. |
+| `part` | No | Annex section as a string, such as `"A"` or `"1"`. Use only in annexes that are split into sections. |
 | `paragraph` | No | Paragraph number as a string, such as `"1"`. |
 | `point` | No | Point letter or number as a string, such as `"a"`. |
 
@@ -51,6 +52,7 @@ Rules:
 - The consolidated AI Act and GDPR texts contain no recitals. Use recital citations only for DORA, NIS2 and the Data Act.
 - GDPR Article 4 lists numbered definitions without paragraphs. Treat each definition number as the paragraph. For example, the definition of consent is Article 4, paragraph `"11"`.
 - In annexes, treat a numbered point as the paragraph and a lettered sub-point as the point. For example, AI Act Annex III, 4(a) is `unit = "annex"`, `number = "III"`, `paragraph = "4"`, `point = "a"`.
+- Some annexes are split into sections that restart their numbering, such as AI Act Annex VIII, Sections A, B and C. Put the section in `part`. For example, AI Act Annex VIII, Section A, point 1 is `unit = "annex"`, `number = "VIII"`, `part = "A"`, `paragraph = "1"`.
 - If a paragraph has no number, leave out `paragraph` and cite the point only. For example, AI Act Article 113, point (c) is `number = "113"`, `point = "c"`.
 - Ignore subparagraphs. For example, AI Act Article 5(1), first subparagraph, point (ba) is `paragraph = "1"`, `point = "ba"`.
 - The format has no field for sub-points such as (i) or (ii). Cite the parent point and name the sub-point in `notes`.
