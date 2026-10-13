@@ -100,7 +100,9 @@ ANNEX = re.compile(r"^ANNEX ([IVXL]+)(?: (.+))?$")
 CHAPTER = re.compile(r"^CHAPTER ([IVXL]+)\b")
 # Section headings vary: "SECTION 1" (AI Act), letter-spaced "S e c t i o n 1"
 # (GDPR) and "Sect ion I I" (DORA). Spaces inside the number are removed.
-SECTION = re.compile(r"^S\s*E\s*C\s*T\s*I\s*O\s*N\s+(\d+|(?:[IVXL]\s?)+)\b", re.IGNORECASE)
+# A heading is the number alone or followed by a capitalised title, so text
+# such as "Section II is amended as follows:" is not a heading.
+SECTION = re.compile(r"^(?i:S\s*E\s*C\s*T\s*I\s*O\s*N)\s+(\d+|(?:[IVXL]\s?)+)(?:\s+[A-Z][^:;]*)?$")
 ANNEX_PART = re.compile(r"^(?:Section|SECTION|Part|PART) ([A-Z0-9]+)\b")
 
 # Markers. Docling puts some markers in the item's `marker` field and leaves
