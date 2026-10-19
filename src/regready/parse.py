@@ -28,6 +28,8 @@ order.
   section       section number within the chapter, or None
   pages         PDF pages the block comes from
   version_date  version date of the act text, from the corpus record
+  quoted        true if the block is quoted replacement text in an amending
+                article. Its references point into the amended act.
 
 The location fields follow the gold citation rules in eval/README.md.
 Find a unit's blocks by comparing these fields, not by matching the start
@@ -164,7 +166,7 @@ class Parser:
         self.expect_title = False
         self.in_quote = False
 
-    def emit(self, text: str, page: int, kind: str = "text") -> None:
+    def emit(self, text: str, page: int, kind: str = "text", quoted: bool = False) -> None:
         location = (self.act, self.unit, self.number, self.part, self.paragraph, self.point)
         self.records.append({
             "seq": len(self.records),
@@ -182,6 +184,7 @@ class Parser:
             "section": self.section,
             "pages": [page],
             "version_date": self.version_date,
+            "quoted": quoted,
         })
 
     def start_unit(self, unit: str, number: str, title: str | None, page: int) -> None:
@@ -214,7 +217,7 @@ class Parser:
         if self.in_quote:
             m = ARTICLE.match(text)
             if not (m and self.is_next_article(m.group(1))):
-                self.emit(text, page)
+                self.emit(text, page, quoted=True)
                 if QUOTE_END.search(text):
                     self.in_quote = False
                 return
@@ -240,6 +243,11 @@ class Parser:
             self.region = "annexes"
             self.chapter = self.section = None
             self.start_unit("annex", m.group(1), m.group(2), page)
+            return
+        # In a consolidated text, "CHAPTER I" comes before the first article,
+        # while the parser is still in the front matter.
+        if self.region == "front" and (m := CHAPTER.match(text)):
+            self.chapter = m.group(1)
             return
         if self.region in ("front", "end"):
             return
@@ -299,7 +307,7 @@ class Parser:
 
         # An item that opens with a quote mark is quoted replacement text.
         if not item["marker"].strip() and text[:1] in QUOTES:
-            self.emit(text, page)
+            self.emit(text, page, quoted=True)
             self.in_quote = not QUOTE_END.search(text)
             return
 
@@ -390,6 +398,15 @@ def check(records: list[dict]) -> tuple[list[str], list[str]]:
                 continue
             if value in values or (values and key(value) < key(values[-1])):
                 problems.append(f"{r['act']} seq {r['seq']}: {value!r} after {values[-1]!r} in {scope}")
+            # Single-letter points run a, b, c without gaps. Inserted points
+            # such as "ba" have two letters and are not counted. A gap means a
+            # point was lost, as when docling labelled DORA Article 31(1),
+            # point (a), as a footnote.
+            if seen is seen_points and len(value) == 1:
+                letters = [v for v in values if len(v) == 1]
+                expected = chr(ord(letters[-1]) + 1) if letters else "a"
+                if value != expected:
+                    problems.append(f"{r['act']} seq {r['seq']}: point {value!r} where {expected!r} was expected in {scope}")
             values.append(value)
     return problems, notes
 

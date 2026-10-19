@@ -133,3 +133,19 @@ def test_missing_formula_is_a_problem():
     ]
     _, problems = parse(items, "dora", "2022-12-27", False)
     assert problems == ["dora: drafting formulas found ['whereas', 'enacting'], expected ['whereas', 'enacting', 'done_at']"]
+
+
+def test_point_gap_is_a_problem():
+    # Docling once dropped DORA Article 31(1), point (a). A list that starts
+    # at (b) must be reported.
+    from regready.parse import check
+    records = consolidated(item("Title", label="section_header"), item("Intro:", marker="1."), item("(b) second point;"))
+    problems, _ = check(records)
+    assert problems == ["gdpr seq 2: point 'b' where 'a' was expected in ('article', '1', None, '1')"]
+
+
+def test_chapter_before_first_article_in_consolidated_text():
+    items = [item("CHAPTER I", label="section_header"), item("GENERAL PROVISIONS", label="section_header"),
+             item("Article 1", label="section_header"), item("Subject matter", label="section_header")]
+    records, problems = parse(items, "gdpr", "2016-05-04", True)
+    assert problems == [] and records[0]["chapter"] == "I"

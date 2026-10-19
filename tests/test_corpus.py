@@ -99,3 +99,59 @@ def test_gold_citation_resolves(qid, gold):
         and all(r[k] == gold[k] for k in ("part", "paragraph", "point") if k in gold)
     ]
     assert blocks, f"{qid}: no blocks for {gold}"
+
+
+@pytest.mark.parametrize("act", EXPECTED)
+def test_every_article_has_a_chapter(act):
+    # A consolidated text puts "CHAPTER I" before the first article.
+    assert not [r["cite"] for r in load_units(act) if r["unit"] == "article" and not r["chapter"]]
+
+
+# --- Cross-references (data/refs, written by refs.py) ---
+
+REFS = ROOT / "data" / "refs"
+needs_refs = pytest.mark.skipif(not REFS.exists(), reason="data/refs not found: run refs")
+
+
+def load_refs(act):
+    return [json.loads(line) for line in open(REFS / f"{act}.jsonl")]
+
+
+def short(target):
+    return ":".join(target[k] or "" for k in ("act", "unit", "number", "part", "paragraph", "point"))
+
+
+# Checked by hand against the act text.
+HAND_CHECKED = [
+    ("ai_act", "ai_act:article:6::2:", "Annex III", ["ai_act:annex:III:::"]),
+    ("dora", "dora:article:1::2:", "Article 4 of that Directive", ["nis2:article:4:::"]),
+    ("ai_act", "ai_act:article:4a::1:", "Article 10(2), points (f) and (g), of this Regulation",
+     ["ai_act:article:10::2:f", "ai_act:article:10::2:g"]),
+    ("data_act", "data_act:article:1::5:", "Articles 15 and 20 of Regulation (EU) 2016/679",
+     ["gdpr:article:15:::", "gdpr:article:20:::"]),
+]
+
+
+@needs_refs
+@pytest.mark.parametrize("act,source,text,expected", HAND_CHECKED)
+def test_hand_checked_reference(act, source, text, expected):
+    [ref] = [r for r in load_refs(act) if r["source"] == source and r["text"] == text]
+    assert ref["status"] == "resolved"
+    assert [short(t) for t in ref["targets"]] == expected
+
+
+@needs_refs
+@pytest.mark.parametrize("act", EXPECTED)
+def test_resolved_targets_exist(act):
+    cites = {r["cite"] for a in EXPECTED for r in load_units(a)}
+    prefixes = {c.rsplit(":", n)[0] for c in cites for n in range(4)}
+    chapters = {(r["act"], r["chapter"], r["section"]) for a in EXPECTED for r in load_units(a) if r["chapter"]}
+    chapters |= {(a, c, None) for a, c, _ in chapters}
+    for ref in load_refs(act):
+        assert ref["status"] in ("resolved", "outside_corpus", "unresolved", "in_quote")
+        assert bool(ref["targets"]) == (ref["status"] == "resolved")
+        for t in ref["targets"]:
+            if "chapter" in t:
+                assert (t["act"], t["chapter"], t["section"]) in chapters, ref
+            else:
+                assert short(t).rstrip(":") in {p.rstrip(":") for p in prefixes}, ref

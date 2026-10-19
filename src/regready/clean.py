@@ -103,9 +103,14 @@ def clean(doc: dict) -> tuple[list[dict], list[dict]]:
 
         item = {"label": node["label"], "text": text, "marker": node.get("marker", ""), "page": page}
 
-        # Docling misses some footnotes. Their spaced marker identifies them.
-        if FOOTNOTE.match(f"{item['marker']} {text}".strip()):
+        # A footnote always starts with its marker. Docling misses some
+        # footnotes, and once labelled DORA Article 31(1), point (a), as a
+        # footnote. The marker decides, not docling's label.
+        is_footnote = bool(FOOTNOTE.match(f"{item['marker']} {text}".strip()))
+        if is_footnote:
             item["label"] = "footnote"
+        elif item["label"] == "footnote":
+            item["label"] = "list_item"
 
         # A body item that starts in lower case on a new page continues the
         # sentence from the previous page. Footnotes sit between the two parts.
