@@ -93,3 +93,58 @@ gold = []
 short_answer = "Not covered. The corpus has no national laws."
 full_answer = "The corpus does not include national implementing laws."
 ```
+
+## Retrieval scoring
+
+These rules score retrieval in every mode: classic, classic with expansion, agentic and hybrid. The same rules apply to all modes, so their results can be compared.
+
+### What is scored
+
+Score the text that the model receives as context:
+
+- Classic: the top-ranked chunks.
+- Classic with expansion: the top-ranked chunks, expanded to their whole legal units.
+- Agentic: everything the model fetched with its tools.
+- Hybrid: the initial chunks plus everything fetched with tools.
+
+Each piece of context records the `seq` numbers of the unit blocks it contains (see `src/regready/parse.py`). The scorer works from these numbers, so it does not depend on the chunking strategy.
+
+### Hit rule
+
+A gold citation is found if at least one of its blocks is in the context. Title blocks do not count.
+
+A citation names a whole legal unit, because an answer cannot cite a single sentence inside a unit. So any part of the unit in the context is enough to cite it.
+
+Retrieval scoring does not check that the right part of a unit was found. For example, retrieving only the wrong sub-point of AI Act Article 113, point (c), still counts as finding that point. The generation stage catches this, because the answer is checked against `short_answer`.
+
+### Budget
+
+Compare modes at the same amount of context text, counted in words: 750, 1,500 and 3,000 words. These are roughly 1,000, 2,000 and 4,000 tokens.
+
+Words do not depend on any model's tokenizer, so the budgets stay fixed while models change.
+
+For ranked chunks, take chunks in rank order until the next chunk would exceed the budget. The first chunk is always included.
+
+### Metrics
+
+| Metric | Per question | Role |
+|---|---|---|
+| Recall@budget | Share of the question's gold citations found | Main metric |
+| Full recall@budget | 1 if all gold citations are found, else 0 | Matters most for `cross_act` |
+| MRR | 1 divided by the rank of the first chunk that contains a gold block | Ranking quality |
+| nDCG@10 | Ranking quality; a chunk is relevant if it contains a gold block | Secondary. Not strictly comparable across chunking strategies. |
+
+### Questions scored
+
+Only questions with gold citations. `unanswerable` questions are scored at the generation stage, which checks that the system abstains.
+
+### Reporting
+
+Each run reports:
+
+- Every metric per question type and overall, never only the overall average.
+- The questions that missed, with the gold citations that were not found.
+
+Each run writes a record to `eval/runs/`, which is committed. The record holds the date, the chunking strategy, the retrieval mode, the names and versions of any models, and the results. Failed and dropped approaches are recorded too.
+
+With the current eval set, one question is worth about 5 percentage points of overall recall, and more within its type. Treat small differences between runs as signs, not proof.
