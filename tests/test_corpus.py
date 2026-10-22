@@ -155,3 +155,26 @@ def test_resolved_targets_exist(act):
                 assert (t["act"], t["chapter"], t["section"]) in chapters, ref
             else:
                 assert short(t).rstrip(":") in {p.rstrip(":") for p in prefixes}, ref
+
+
+# --- Chunks (data/chunks, written by chunk.py) ---
+
+CHUNKS = ROOT / "data" / "chunks" / "blocks.jsonl"
+needs_chunks = pytest.mark.skipif(not CHUNKS.exists(), reason="data/chunks not found: run chunk")
+
+
+@needs_chunks
+def test_one_chunk_per_non_title_block():
+    chunks = [json.loads(line) for line in open(CHUNKS)]
+    blocks = {(r["act"], r["seq"]) for a in EXPECTED for r in load_units(a) if r["kind"] != "title"}
+    assert sorted((c["act"], c["blocks"][0]) for c in chunks) == sorted(blocks)
+
+
+@needs_chunks
+def test_chunk_parents_exist():
+    cites = {r["cite"] for a in EXPECTED for r in load_units(a)}
+    for chunk in map(json.loads, open(CHUNKS)):
+        for level, parent in chunk["parents"].items():
+            # A parent exists if some block's cite starts with its filled slots.
+            filled = parent.rstrip(":")
+            assert any(c == parent or c.startswith(filled + ":") for c in cites), (chunk["id"], level, parent)
