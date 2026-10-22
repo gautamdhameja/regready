@@ -33,18 +33,11 @@ Run: uv run python -m regready.chunk
 import json
 from pathlib import Path
 
-from regready.parse import ACTS
+from regready.corpus import ACTS, NAME_BY_KEY
+from regready.parse import LOCATION, make_cite
 
 UNITS_DIR = Path("data/units")
 OUT_DIR = Path("data/chunks")
-
-ACT_NAMES = {"ai_act": "AI Act", "gdpr": "GDPR", "dora": "DORA", "nis2": "NIS2", "data_act": "Data Act"}
-
-LOCATION = ("act", "unit", "number", "part", "paragraph", "point")
-
-
-def make_cite(*values) -> str:
-    return ":".join(value or "" for value in values)
 
 
 def label(block: dict) -> str:
@@ -123,7 +116,7 @@ def build(blocks: list[dict]) -> list[dict]:
     for b in blocks:
         if b["kind"] == "title":
             continue
-        header = ", ".join(part for part in (ACT_NAMES[b["act"]], label(b), b["title"]) if part)
+        header = ", ".join(part for part in (NAME_BY_KEY[b["act"]], label(b), b["title"]) if part)
         text = "\n".join([header, *leads.get(b["seq"], []), b["text"]])
         chunks.append({
             "id": f"{b['act']}:{b['seq']}",
@@ -145,13 +138,13 @@ def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     total = 0
     with open(OUT_DIR / "blocks.jsonl", "w") as f:
-        for act, _, _ in ACTS.values():
-            blocks = [json.loads(line) for line in open(UNITS_DIR / f"{act}.jsonl")]
+        for act in ACTS:
+            blocks = [json.loads(line) for line in open(UNITS_DIR / f"{act.key}.jsonl")]
             chunks = build(blocks)
             for chunk in chunks:
                 f.write(json.dumps(chunk, ensure_ascii=False) + "\n")
             words = sorted(c["words"] for c in chunks)
-            print(f"{act}: {len(chunks)} chunks, words median {words[len(words) // 2]}, max {words[-1]}")
+            print(f"{act.key}: {len(chunks)} chunks, words median {words[len(words) // 2]}, max {words[-1]}")
             total += len(chunks)
     print(f"total: {total} chunks")
 

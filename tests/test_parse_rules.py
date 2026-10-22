@@ -4,7 +4,7 @@ Each test feeds a few cleaned items through parse() and checks where the
 text ends up. No corpus data is needed.
 """
 
-from regready.parse import parse
+from regready.parse import check, parse
 
 
 def item(text, marker="", label="list_item", page=1):
@@ -19,7 +19,8 @@ def consolidated(*body):
     return records
 
 
-def cites(records):
+def located(records):
+    """(paragraph, point, text) of each text block."""
     return [(r["paragraph"], r["point"], r["text"]) for r in records if r["kind"] == "text"]
 
 
@@ -36,7 +37,7 @@ def test_paragraphs_and_points():
         item("(a) first practice;"),
         item("(ba) inserted practice;"),
     )
-    assert cites(records) == [
+    assert located(records) == [
         ("1", None, "The following shall be prohibited:"),
         ("1", "a", "first practice;"),
         ("1", "ba", "inserted practice;"),
@@ -46,7 +47,7 @@ def test_paragraphs_and_points():
 def test_numbered_items_are_paragraphs():
     # Numbered definitions, such as GDPR Article 4(11).
     records = consolidated(item("Title", label="section_header"), item("'consent' means ...", marker="(11)"))
-    assert cites(records) == [("11", None, "'consent' means ...")]
+    assert located(records) == [("11", None, "'consent' means ...")]
 
 
 def test_text_after_points_returns_to_the_paragraph():
@@ -57,12 +58,12 @@ def test_text_after_points_returns_to_the_paragraph():
         item("(a) consent;"),
         item("Point (a) shall not apply to ...", label="text"),
     )
-    assert cites(records)[-1] == ("1", None, "Point (a) shall not apply to ...")
+    assert located(records)[-1] == ("1", None, "Point (a) shall not apply to ...")
 
 
 def test_i_after_h_is_a_letter():
     records = consolidated(item("Title", label="section_header"), item("Measures:", marker="2."), item("(h) cryptography;"), item("(i) access control;"))
-    assert cites(records)[-1] == ("2", "i", "access control;")
+    assert located(records)[-1] == ("2", "i", "access control;")
 
 
 def test_i_followed_by_ii_is_a_sub_point():
@@ -74,7 +75,7 @@ def test_i_followed_by_ii_is_a_sub_point():
         item("(ii) second sub-point;"),
     )
     # Both sub-points stay with point (h) and keep their marker in the text.
-    assert cites(records)[-2:] == [("2", "h", "(i) first sub-point;"), ("2", "h", "(ii) second sub-point;")]
+    assert located(records)[-2:] == [("2", "h", "(i) first sub-point;"), ("2", "h", "(ii) second sub-point;")]
 
 
 def test_quoted_text_is_not_structure():
@@ -88,7 +89,7 @@ def test_quoted_text_is_not_structure():
         item("(b) also inside the quote.';"),
         item("(b) paragraph 6 is deleted;"),
     )
-    assert [(p, pt) for p, pt, _ in cites(records)] == [("1", None), ("1", "a"), ("1", "a"), ("1", "a"), ("1", "a"), ("1", "b")]
+    assert [(p, pt) for p, pt, _ in located(records)] == [("1", None), ("1", "a"), ("1", "a"), ("1", "a"), ("1", "a"), ("1", "b")]
 
 
 def test_quote_can_close_on_a_footnote():
@@ -99,7 +100,7 @@ def test_quote_can_close_on_a_footnote():
         item("(*) Regulation (EU) 2022/2554 (OJ L 333, 27.12.2022, p. 1).';", label="footnote"),
         item("paragraph 2 is deleted;", marker="(2)"),
     )
-    assert cites(records)[-1] == ("2", None, "paragraph 2 is deleted;")
+    assert located(records)[-1] == ("2", None, "paragraph 2 is deleted;")
 
 
 def test_original_act_regions():
@@ -138,7 +139,6 @@ def test_missing_formula_is_a_problem():
 def test_point_gap_is_a_problem():
     # Docling once dropped DORA Article 31(1), point (a). A list that starts
     # at (b) must be reported.
-    from regready.parse import check
     records = consolidated(item("Title", label="section_header"), item("Intro:", marker="1."), item("(b) second point;"))
     problems, _ = check(records)
     assert problems == ["gdpr seq 2: point 'b' where 'a' was expected in ('article', '1', None, '1')"]

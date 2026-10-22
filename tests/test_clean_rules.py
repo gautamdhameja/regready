@@ -22,5 +22,5 @@ def test_spaced_marker_is_a_footnote():
 
 
 def test_consolidation_markers_and_soft_hyphens_are_removed():
-    items, _ = clean(doc(("text", "▼M1 dispropor­ tionate", "")))
+    items, _ = clean(doc(("text", "▼M1 dispropor\u00ad tionate", "")))
     assert items[0]["text"] == "disproportionate"

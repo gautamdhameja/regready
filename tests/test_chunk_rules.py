@@ -1,13 +1,14 @@
 """Chunk rules, tested on small hand-made blocks."""
 
 from regready.chunk import build
+from regready.parse import make_cite
 
 
 def block(seq, text, paragraph=None, point=None, number="5", kind="text", title="Prohibited AI practices"):
     return {"seq": seq, "act": "ai_act", "unit": "article", "number": number, "part": None,
             "paragraph": paragraph, "point": point, "kind": kind, "text": text, "title": title,
             "chapter": "II", "section": None, "version_date": "2026-07-27",
-            "cite": f"ai_act:article:{number}::{paragraph or ''}:{point or ''}"}
+            "cite": make_cite("ai_act", "article", number, None, paragraph, point)}
 
 
 def texts(blocks):

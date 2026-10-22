@@ -1,8 +1,10 @@
-# Documents Corpus for RAG
+# Corpus
 
 The `corpus/` directory holds one PDF per act. Each PDF is the latest English version available on EUR-Lex at download time. Two are consolidated texts. Three are the original texts as published in the Official Journal (OJ).
 
 All five files were downloaded from eur-lex.europa.eu on 8 October 2026.
+
+The code reads the same facts from `src/regready/corpus.py`. Change both together.
 
 ## Summary
 
@@ -24,7 +26,6 @@ For consolidated texts, the version date is the date in the consolidated CELEX n
 - Consolidated version 001.001, dated 27 July 2026.
 - Includes amendment M1: Regulation (EU) 2026/1744 of 8 July 2026 (the Digital Omnibus on AI), OJ L 1744, 24 July 2026.
 - Original text: OJ L 1689, 12 July 2024.
-- Contains no recitals. The consolidated text has articles and annexes only.
 
 ### GDPR
 
@@ -32,7 +33,6 @@ For consolidated texts, the version date is the date in the consolidated CELEX n
 - Consolidated version 000.002, dated 4 May 2016.
 - No amendments. Includes corrigendum C1, OJ L 127, 23 May 2018, p. 2.
 - Original text: OJ L 119, 4 May 2016, p. 1.
-- Contains no recitals. The consolidated text has articles only.
 - Digital Omnibus changes to the GDPR were still in negotiation as of August 2026. This text may change.
 
 ### DORA

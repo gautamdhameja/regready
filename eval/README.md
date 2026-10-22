@@ -1,8 +1,8 @@
-# Eval question format
+# Eval set
 
 This directory holds the hand-written eval set. The eval set defines success for the pipeline. Every component change is judged against it.
 
-Questions are stored in TOML files. Python reads them with the standard library module `tomllib`.
+This page describes the question format and how retrieval is scored. The questions are in `questions.toml`, which Python reads with the standard library module `tomllib`.
 
 ## Question fields
 
@@ -45,7 +45,7 @@ Each gold citation is a table with these fields:
 
 Rules:
 
-- Cite at the finest level that holds the answer: paragraph or point where possible. Scoring can be made less strict later. Adding detail later is not possible without rechecking every question.
+- Cite at the finest level that holds the answer: paragraph or point where possible. Adding detail later is not possible without rechecking every question.
 - Gold must support every fact in `short_answer` and `full_answer`. If an answer states a date, condition or exception, the provision it comes from is gold. Facts from outside the corpus must be flagged in `notes`.
 - A correct answer must find every gold citation. There is no "any one of these" option.
 - Use a recital as gold only when the answer is in the recital itself. Otherwise cite the article.
@@ -107,7 +107,7 @@ Score the text that the model receives as context:
 - Agentic: everything the model fetched with its tools.
 - Hybrid: the initial chunks plus everything fetched with tools.
 
-Each piece of context records the `seq` numbers of the unit blocks it contains (see `src/regready/parse.py`). The scorer works from these numbers, so it does not depend on the chunking strategy.
+Each piece of context records the `seq` numbers of the unit blocks it contains, as chunks do in their `blocks` field (see `src/regready/chunk.py`). The scorer works from these numbers, so it does not depend on the chunking strategy.
 
 ### Hit rule
 

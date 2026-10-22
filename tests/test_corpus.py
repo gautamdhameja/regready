@@ -1,28 +1,31 @@
 """Checks on the real pipeline output for all five acts.
 
-These tests read data/cleaned and data/units, which git ignores. Generate
-them first:
+These tests read data/, which git ignores. Generate it first:
 
   uv run python -m regready.extract
   uv run python -m regready.clean
   uv run python -m regready.parse
+  uv run python -m regready.refs
+  uv run python -m regready.chunk
 """
 
 import json
 import re
 import tomllib
+from functools import cache
 from pathlib import Path
 
 import pytest
 
-from regready.parse import ACTS, SECTION, check, parse
+from regready.clean import BODY_STAMP
+from regready.corpus import ACTS
+from regready.parse import LOCATION, SECTION, check, make_cite, parse
 
 ROOT = Path(__file__).parent.parent
-CLEANED = ROOT / "data" / "cleaned"
-UNITS = ROOT / "data" / "units"
+DATA = ROOT / "data"
 
-if not UNITS.exists():
-    pytest.skip("data/units not found: run extract, clean and parse first", allow_module_level=True)
+if not (DATA / "units").exists():
+    pytest.skip("data/units not found: run the pipeline first", allow_module_level=True)
 
 ROMAN = ["I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV"]
 
@@ -31,8 +34,8 @@ def numbers(last, inserted=()):
     return {str(n) for n in range(1, last + 1)} | set(inserted)
 
 
-# What each act must contain. Recitals are missing from the consolidated
-# AI Act and GDPR texts (see corpus.md).
+# Articles, recitals and annexes each act must contain. The consolidated
+# AI Act and GDPR texts have no recitals (see corpus.md).
 EXPECTED = {
     "ai_act": (numbers(113, ["4a", "60a", "75a", "75b", "75c", "75d"]), 0, set(ROMAN)),
     "gdpr": (numbers(99), 0, set()),
@@ -42,47 +45,68 @@ EXPECTED = {
 }
 
 
+def read_jsonl(path):
+    return [json.loads(line) for line in open(path)]
+
+
+@cache
 def load_units(act):
-    return [json.loads(line) for line in open(UNITS / f"{act}.jsonl")]
+    return read_jsonl(DATA / "units" / f"{act}.jsonl")
 
 
-def load_cleaned(stem):
-    return [json.loads(line) for line in open(CLEANED / f"{stem}.jsonl")]
+@cache
+def existing_units():
+    """Location of every unit at every level, such as Article 5, 5(1) and 5(1)(f)."""
+    units = set()
+    for act in EXPECTED:
+        for b in load_units(act):
+            act_, unit, number, part, paragraph, point = (b[k] for k in LOCATION)
+            units |= {(act_, unit, number, None, None, None), (act_, unit, number, part, None, None),
+                      (act_, unit, number, part, paragraph, None), (act_, unit, number, part, paragraph, point)}
+    return units
+
+
+# --- Units (data/units, written by parse.py) ---
 
 
 @pytest.mark.parametrize("act", EXPECTED)
 def test_structure_counts(act):
     articles, recitals, annexes = EXPECTED[act]
-    records = load_units(act)
 
     def found(unit):
-        return {r["number"] for r in records if r["unit"] == unit}
+        return {r["number"] for r in load_units(act) if r["unit"] == unit}
 
     assert found("article") == articles
     assert found("recital") == numbers(recitals)
     assert found("annex") == annexes
 
 
-@pytest.mark.parametrize("stem", ACTS)
-def test_parser_reports_no_problems(stem):
-    act, version_date, consolidated = ACTS[stem]
-    records, problems = parse(load_cleaned(stem), act, version_date, consolidated)
+@pytest.mark.parametrize("act", ACTS, ids=lambda act: act.key)
+def test_parser_reports_no_problems(act):
+    items = read_jsonl(DATA / "cleaned" / f"{act.stem}.jsonl")
+    records, problems = parse(items, act.key, act.version_date, act.consolidated)
     structure_problems, notes = check(records)
     assert problems == []
     assert structure_problems == []
     # AI Act Article 43(1) restarts its points in a second subparagraph.
     # Any other restart needs a look, because the two lists share cites.
-    expected_notes = ["ai_act:article:43::1:a (seq 563): points restart after a subparagraph"] if act == "ai_act" else []
+    expected_notes = ["ai_act:article:43::1:a (seq 563): points restart after a subparagraph"] if act.key == "ai_act" else []
     assert notes == expected_notes
 
 
 @pytest.mark.parametrize("act", EXPECTED)
 def test_no_leftover_noise(act):
     for r in load_units(act):
-        assert not re.search(r"[▼►­]", r["text"]), r["cite"]
-        assert not re.match(r"^(EN|L \d+/\d+|\d{1,2}\.\d{1,2}\.\d{4})$", r["text"]), r["cite"]
+        assert not re.search("[▼►\u00ad]", r["text"]), r["cite"]
+        assert not BODY_STAMP.match(r["text"]), r["cite"]
         # A section heading inside an article means the parser missed it.
         assert not (r["unit"] == "article" and SECTION.match(r["text"])), r["cite"]
+
+
+@pytest.mark.parametrize("act", EXPECTED)
+def test_every_article_has_a_chapter(act):
+    # A consolidated text puts "CHAPTER I" before the first article.
+    assert not [r["cite"] for r in load_units(act) if r["unit"] == "article" and not r["chapter"]]
 
 
 def gold_citations():
@@ -92,34 +116,13 @@ def gold_citations():
 
 @pytest.mark.parametrize("qid,gold", gold_citations())
 def test_gold_citation_resolves(qid, gold):
-    blocks = [
-        r for r in load_units(gold["act"])
-        if r["unit"] == gold["unit"]
-        and r["number"] == gold["number"]
-        and all(r[k] == gold[k] for k in ("part", "paragraph", "point") if k in gold)
-    ]
-    assert blocks, f"{qid}: no blocks for {gold}"
-
-
-@pytest.mark.parametrize("act", EXPECTED)
-def test_every_article_has_a_chapter(act):
-    # A consolidated text puts "CHAPTER I" before the first article.
-    assert not [r["cite"] for r in load_units(act) if r["unit"] == "article" and not r["chapter"]]
+    location = tuple(gold.get(k) for k in LOCATION)
+    assert location in existing_units(), qid
 
 
 # --- Cross-references (data/refs, written by refs.py) ---
 
-REFS = ROOT / "data" / "refs"
-needs_refs = pytest.mark.skipif(not REFS.exists(), reason="data/refs not found: run refs")
-
-
-def load_refs(act):
-    return [json.loads(line) for line in open(REFS / f"{act}.jsonl")]
-
-
-def short(target):
-    return ":".join(target[k] or "" for k in ("act", "unit", "number", "part", "paragraph", "point"))
-
+needs_refs = pytest.mark.skipif(not (DATA / "refs").exists(), reason="data/refs not found: run refs")
 
 # Checked by hand against the act text.
 HAND_CHECKED = [
@@ -135,46 +138,42 @@ HAND_CHECKED = [
 @needs_refs
 @pytest.mark.parametrize("act,source,text,expected", HAND_CHECKED)
 def test_hand_checked_reference(act, source, text, expected):
-    [ref] = [r for r in load_refs(act) if r["source"] == source and r["text"] == text]
+    [ref] = [r for r in read_jsonl(DATA / "refs" / f"{act}.jsonl") if r["source"] == source and r["text"] == text]
     assert ref["status"] == "resolved"
-    assert [short(t) for t in ref["targets"]] == expected
+    assert [make_cite(*(t[k] for k in LOCATION)) for t in ref["targets"]] == expected
 
 
 @needs_refs
 @pytest.mark.parametrize("act", EXPECTED)
 def test_resolved_targets_exist(act):
-    cites = {r["cite"] for a in EXPECTED for r in load_units(a)}
-    prefixes = {c.rsplit(":", n)[0] for c in cites for n in range(4)}
-    chapters = {(r["act"], r["chapter"], r["section"]) for a in EXPECTED for r in load_units(a) if r["chapter"]}
-    chapters |= {(a, c, None) for a, c, _ in chapters}
-    for ref in load_refs(act):
+    chapters = {(b["act"], b["chapter"], s) for a in EXPECTED for b in load_units(a) if b["chapter"]
+                for s in (None, b["section"])}
+    for ref in read_jsonl(DATA / "refs" / f"{act}.jsonl"):
         assert ref["status"] in ("resolved", "outside_corpus", "unresolved", "in_quote")
         assert bool(ref["targets"]) == (ref["status"] == "resolved")
         for t in ref["targets"]:
             if "chapter" in t:
                 assert (t["act"], t["chapter"], t["section"]) in chapters, ref
             else:
-                assert short(t).rstrip(":") in {p.rstrip(":") for p in prefixes}, ref
+                assert tuple(t[k] for k in LOCATION) in existing_units(), ref
 
 
 # --- Chunks (data/chunks, written by chunk.py) ---
 
-CHUNKS = ROOT / "data" / "chunks" / "blocks.jsonl"
+CHUNKS = DATA / "chunks" / "blocks.jsonl"
 needs_chunks = pytest.mark.skipif(not CHUNKS.exists(), reason="data/chunks not found: run chunk")
 
 
 @needs_chunks
 def test_one_chunk_per_non_title_block():
-    chunks = [json.loads(line) for line in open(CHUNKS)]
-    blocks = {(r["act"], r["seq"]) for a in EXPECTED for r in load_units(a) if r["kind"] != "title"}
+    chunks = read_jsonl(CHUNKS)
+    blocks = {(b["act"], b["seq"]) for a in EXPECTED for b in load_units(a) if b["kind"] != "title"}
     assert sorted((c["act"], c["blocks"][0]) for c in chunks) == sorted(blocks)
 
 
 @needs_chunks
 def test_chunk_parents_exist():
-    cites = {r["cite"] for a in EXPECTED for r in load_units(a)}
-    for chunk in map(json.loads, open(CHUNKS)):
+    for chunk in read_jsonl(CHUNKS):
         for level, parent in chunk["parents"].items():
-            # A parent exists if some block's cite starts with its filled slots.
-            filled = parent.rstrip(":")
-            assert any(c == parent or c.startswith(filled + ":") for c in cites), (chunk["id"], level, parent)
+            location = tuple(value or None for value in parent.split(":"))
+            assert location in existing_units(), (chunk["id"], level, parent)

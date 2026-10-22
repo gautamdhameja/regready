@@ -3,6 +3,7 @@
 A tiny index stands in for the corpus, so no data is needed.
 """
 
+from regready.parse import make_cite
 from regready.refs import Index, find_refs, read_chain
 
 
@@ -10,8 +11,8 @@ def block(text, act="dora", unit="article", number="5", paragraph=None, point=No
     fields = {"act": act, "unit": unit, "number": number, "part": None, "paragraph": paragraph,
               "point": point, "chapter": "II", "section": None, "title": "Title", "kind": "text", "quoted": False}
     fields.update(extra)
-    location = (fields["act"], unit, number, "", paragraph or "", point or "")
-    return {"seq": 0, "cite": ":".join(location), "text": text, **fields}
+    cite = make_cite(fields["act"], unit, number, None, paragraph, point)
+    return {"seq": 0, "cite": cite, "text": text, **fields}
 
 
 # DORA articles 5 to 7 with paragraphs and points; NIS2 article 4.
@@ -66,7 +67,7 @@ def test_other_corpus_act_by_number():
 
 
 def test_that_directive_is_the_last_one_named():
-    [first, second] = find_refs(block("Article 4 of Directive (EU) 2022/2555 and Article 4 of that Directive"), INDEX)
+    [_, second] = find_refs(block("Article 4 of Directive (EU) 2022/2555 and Article 4 of that Directive"), INDEX)
     assert second["status"] == "resolved" and second["targets"][0]["act"] == "nis2"
 
 

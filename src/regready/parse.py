@@ -26,8 +26,8 @@ order.
   title         article or annex title, copied to every block in the unit
   chapter       chapter number, such as "II", or None
   section       section number within the chapter, or None
-  pages         PDF pages the block comes from
-  version_date  version date of the act text, from the corpus record
+  page          PDF page where the block starts
+  version_date  version date of the act text, from corpus.py
   quoted        true if the block is quoted replacement text in an amending
                 article. Its references point into the amended act.
 
@@ -68,18 +68,19 @@ import re
 import sys
 from pathlib import Path
 
+from regready.corpus import ACTS
+
 IN_DIR = Path("data/cleaned")
 OUT_DIR = Path("data/units")
 
-# Corpus record from corpus.md:
-# cleaned file stem -> (act, version date, consolidated text or not).
-ACTS = {
-    "CELEX_02024R1689-20260727_EN_TXT": ("ai_act", "2026-07-27", True),
-    "CELEX_02016R0679-20160504_EN_TXT": ("gdpr", "2016-05-04", True),
-    "CELEX_32022R2554_EN_TXT": ("dora", "2022-12-27", False),
-    "CELEX_32022L2555_EN_TXT": ("nis2", "2022-12-27", False),
-    "OJ_L_202302854_EN_TXT": ("data_act", "2023-12-22", False),
-}
+# The location fields of a block, in citation order.
+LOCATION = ("act", "unit", "number", "part", "paragraph", "point")
+
+
+def make_cite(*values: str | None) -> str:
+    """Join location values into a cite, keeping empty slots: "ai_act:article:5::1:f"."""
+    return ":".join(value or "" for value in values)
+
 
 # Drafting formulas that every act must contain, in this order. They mark
 # the boundaries between the parts of an act. Source: Joint Handbook for
@@ -108,7 +109,8 @@ SECTION = re.compile(r"^(?i:S\s*E\s*C\s*T\s*I\s*O\s*N)\s+(\d+|(?:[IVXL]\s?)+)(?:
 ANNEX_PART = re.compile(r"^(?:Section|SECTION|Part|PART) ([A-Z0-9]+)\b")
 
 # Markers. Docling puts some markers in the item's `marker` field and leaves
-# others at the start of the text.
+# others at the start of the text. A text marker allows four letters, for
+# sub-points such as "(viii)"; a point has at most three.
 TEXT_MARKER = re.compile(r"^(\d+[a-z]?\.|\(\d+[a-z]?\)|\([a-z]{1,4}\))\s+")
 PARAGRAPH = re.compile(r"^(\d+[a-z]?)\.$")  # 1.  1a.
 NUMBERED = re.compile(r"^\((\d+[a-z]?)\)$")  # (1)  (14a)
@@ -167,10 +169,9 @@ class Parser:
         self.in_quote = False
 
     def emit(self, text: str, page: int, kind: str = "text", quoted: bool = False) -> None:
-        location = (self.act, self.unit, self.number, self.part, self.paragraph, self.point)
         self.records.append({
             "seq": len(self.records),
-            "cite": ":".join(value or "" for value in location),
+            "cite": make_cite(self.act, self.unit, self.number, self.part, self.paragraph, self.point),
             "act": self.act,
             "unit": self.unit,
             "number": self.number,
@@ -182,7 +183,7 @@ class Parser:
             "title": self.title,
             "chapter": self.chapter,
             "section": self.section,
-            "pages": [page],
+            "page": page,
             "version_date": self.version_date,
             "quoted": quoted,
         })
@@ -414,15 +415,15 @@ def check(records: list[dict]) -> tuple[list[str], list[str]]:
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     problems = []
-    for stem, (act, version_date, consolidated) in ACTS.items():
-        items = [json.loads(line) for line in open(IN_DIR / f"{stem}.jsonl")]
-        records, parse_problems = parse(items, act, version_date, consolidated)
+    for act in ACTS:
+        items = [json.loads(line) for line in open(IN_DIR / f"{act.stem}.jsonl")]
+        records, parse_problems = parse(items, act.key, act.version_date, act.consolidated)
         problems += parse_problems
-        with open(OUT_DIR / f"{act}.jsonl", "w") as f:
+        with open(OUT_DIR / f"{act.key}.jsonl", "w") as f:
             for record in records:
                 f.write(json.dumps(record, ensure_ascii=False) + "\n")
         counts = {u: len({r["number"] for r in records if r["unit"] == u}) for u in ("recital", "article", "annex")}
-        print(f"{act}: {len(records)} blocks, {counts}")
+        print(f"{act.key}: {len(records)} blocks, {counts}")
         act_problems, act_notes = check(records)
         problems += act_problems
         for note in act_notes:

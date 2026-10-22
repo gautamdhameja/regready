@@ -2,7 +2,7 @@
 
 ## What this project is
 
-A retrieval system over five EU digital regulations, with a evaluation comparing three ways of answering questions.
+A retrieval system over five EU digital regulations, with an evaluation comparing three ways of answering questions.
 The system finds and cites the relevant provisions for a question. It does not give legal advice and must never present output as legal advice.
 
 ## Audience

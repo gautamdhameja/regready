@@ -1,7 +1,7 @@
 [project]
 name = "regready"
 version = "0.1.0"
-description = "Add your description here"
+description = "Retrieval and citation of provisions in five EU digital regulations"
 readme = "README.md"
 authors = [
     { name = "Gautam Dhameja", email = "gautamdhameja@users.noreply.github.com" }
@@ -10,9 +10,6 @@ requires-python = ">=3.13"
 dependencies = [
     "docling>=2.137.0",
 ]
-
-[project.scripts]
-regready = "regready:main"
 
 [build-system]
 requires = ["uv_build>=0.12.23,<0.13.0"]

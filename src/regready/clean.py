@@ -11,7 +11,7 @@ Cleaning steps:
   1. Walk the document tree in reading order. Skip page headers, footers
      and stray page stamps.
   2. Remove consolidation markers (▼B, ▼M1, ►B), soft hyphens and rule
-     lines. Label footnotes that docling missed.
+     lines. Decide footnotes by their marker, not docling's label.
   3. Join an item that continues a sentence across a page break onto the
      item before it.
 
@@ -53,8 +53,8 @@ FOOTNOTE = re.compile(r"^\(\s+\d+\s+\)|^\(\*\)")
 SEPARATOR = re.compile(r"^_{3,}$")
 
 
-def resolve(doc: dict, ref: str) -> dict:
-    # A ref looks like "#/texts/12".
+def lookup(doc: dict, ref: str) -> dict:
+    """The node a docling reference such as "#/texts/12" points to."""
     _, kind, index = ref.split("/")
     return doc[kind][int(index)]
 
@@ -62,7 +62,7 @@ def resolve(doc: dict, ref: str) -> dict:
 def walk(doc: dict, node: dict):
     """Yield text and table nodes under node, in reading order."""
     for child in node.get("children", []):
-        item = resolve(doc, child["$ref"])
+        item = lookup(doc, child["$ref"])
         if item.get("label") == "table":
             yield item
             continue  # cell text is read from the table grid
@@ -78,8 +78,8 @@ def table_text(table: dict) -> str:
 
 def clean_text(text: str) -> str:
     text = MARKER.sub("", text)
-    # A soft hyphen marks a word split at a line end: "dispropor\xad tionate".
-    text = re.sub(r"­\s*", "", text)
+    # A soft hyphen marks a word split at a line end: "dispropor\u00ad tionate".
+    text = re.sub(r"\u00ad\s*", "", text)
     return re.sub(r"\s+", " ", text).strip()
 
 
@@ -106,8 +106,7 @@ def clean(doc: dict) -> tuple[list[dict], list[dict]]:
         # A footnote always starts with its marker. Docling misses some
         # footnotes, and once labelled DORA Article 31(1), point (a), as a
         # footnote. The marker decides, not docling's label.
-        is_footnote = bool(FOOTNOTE.match(f"{item['marker']} {text}".strip()))
-        if is_footnote:
+        if FOOTNOTE.match(f"{item['marker']} {text}".strip()):
             item["label"] = "footnote"
         elif item["label"] == "footnote":
             item["label"] = "list_item"

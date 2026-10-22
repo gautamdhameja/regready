@@ -41,23 +41,14 @@ Run: uv run python -m regready.refs
 
 import json
 import re
-import sys
 from collections import Counter
 from pathlib import Path
 
-from regready.parse import ACTS
+from regready.corpus import ACTS, KEY_BY_NUMBER
+from regready.parse import LOCATION
 
 UNITS_DIR = Path("data/units")
 OUT_DIR = Path("data/refs")
-
-# Official numbers of the corpus acts, as other acts cite them.
-CORPUS_NUMBERS = {
-    "2024/1689": "ai_act",
-    "2016/679": "gdpr",
-    "2022/2554": "dora",
-    "2022/2555": "nis2",
-    "2023/2854": "data_act",
-}
 
 # --- Grammar of a reference -------------------------------------------------
 #
@@ -105,23 +96,20 @@ SUFFIX = (
     r"|(?P<thereof>thereof)\b)"
 )
 REFERENCE = re.compile(rf"(?P<chain>{CHAIN})(?:{SUFFIX})?")
+# SEGMENT again, with named groups, to read a matched chain one segment at a
+# time. CHAIN repeats SEGMENT, so SEGMENT itself cannot hold named groups.
 SEGMENT_PARTS = re.compile(
     rf"(?:{ORDINAL}\s+)?(?P<word>{SINGULAR}|{PLURAL})(?:\s+(?P<ids>{PLURAL_IDS}))?"
     r"|this\s+(?P<this>Article|paragraph|subparagraph|point|Annex)\b"
 )
 ACT_MENTION = re.compile(ACT_REF)
-AMENDS = re.compile(rf"^(?:Amendments?|Amendment)\s+(?:to|of)\s+{ACT_REF}")
-
-WORDS = {
-    "article": "article", "annex": "annex", "annexe": "annex", "paragraph": "paragraph",
-    "point": "point", "subparagraph": "subparagraph", "chapter": "chapter",
-    "section": "section", "recital": "recital",
-}
+AMENDS = re.compile(rf"^Amendments?\s+(?:to|of)\s+{ACT_REF}")
 
 
 def word_kind(word: str) -> str:
+    """"Articles" -> "article", "Annexes" -> "annex"."""
     word = word.lower()
-    return WORDS.get(word, WORDS.get(word[:-1], WORDS.get(word[:-2], word)))
+    return "annex" if word == "annexes" else word.removesuffix("s")
 
 
 def split_ident(ident: str) -> tuple[str | None, list[str]]:
@@ -168,9 +156,8 @@ class Index:
         self.children: dict[tuple, list] = {}
         self.chapters: set[tuple] = set()
         for b in blocks:
-            act, unit, number, part, paragraph, point = (b[k] for k in ("act", "unit", "number", "part", "paragraph", "point"))
+            act, unit, number, part, paragraph, point = (b[k] for k in LOCATION)
             self.add((act, unit), number)
-            self.add((act, unit, number), part)
             self.add((act, unit, number, part), paragraph)
             self.add((act, unit, number, part, paragraph), point)
             for key in [(act, unit, number, None, None, None), (act, unit, number, part, None, None),
@@ -258,26 +245,26 @@ def find_act(m: re.Match, block: dict, mentions: list[tuple], default: str) -> s
     if m.group("self"):
         return block["act"]
     if m.group("number"):
-        return CORPUS_NUMBERS.get(m.group("number").split("/EU")[0], "outside")
+        return KEY_BY_NUMBER.get(m.group("number"), "outside")
     if m.group("treaty") or m.group("treaty_short"):
         return "outside"
     if m.group("anaphor"):
         kind = m.group("anaphor_kind")
         earlier = [number for start, k, number in mentions if k == kind and start < m.start()]
-        return CORPUS_NUMBERS.get(earlier[-1], "outside") if earlier else "unknown"
+        return KEY_BY_NUMBER.get(earlier[-1], "outside") if earlier else "unknown"
     if m.group("thereof"):
         return "unknown"
     return default
 
 
-def resolve(query: dict, act: str, block: dict, index: Index) -> list[dict] | None:
-    """Targets of a reference, or None if a target does not exist."""
+def resolve(group: dict, act: str, block: dict, index: Index) -> list[dict] | None:
+    """Targets of one group of a reference, or None if a target does not exist."""
     same_act = act == block["act"]
 
     # Chapters and sections of the enacting terms.
-    if query["chapter"] or (query["section"] and not query["annex"] and block["unit"] != "annex"):
-        chapters = [c[1] for c in query["chapter"] if c[0] == "one"] or ([block["chapter"]] if same_act else [])
-        sections = [s[1] for s in query["section"] if s[0] == "one"] or [None]
+    if group["chapter"] or (group["section"] and not group["annex"] and block["unit"] != "annex"):
+        chapters = [c[1] for c in group["chapter"] if c[0] == "one"] or ([block["chapter"]] if same_act else [])
+        sections = [s[1] for s in group["section"] if s[0] == "one"] or [None]
         targets = [{"act": act, "chapter": c, "section": s} for c in chapters for s in sections]
         if not targets or any((t["act"], t["chapter"], t["section"]) not in index.chapters for t in targets):
             return None
@@ -285,16 +272,16 @@ def resolve(query: dict, act: str, block: dict, index: Index) -> list[dict] | No
 
     # Which unit numbers, and any paragraph or point written inline: "6(1)(a)".
     part = None
-    if query["article"]:
-        unit, items = "article", query["article"]
-    elif query["annex"]:
-        unit, items = "annex", query["annex"]
-        part = query["section"][0][1] if query["section"] else None
-    elif query["recital"]:
-        unit, items = "recital", query["recital"]
-    elif (query["paragraph"] or query["point"] or query["section"]) and same_act:
+    if group["article"]:
+        unit, items = "article", group["article"]
+    elif group["annex"]:
+        unit, items = "annex", group["annex"]
+        part = group["section"][0][1] if group["section"] else None
+    elif group["recital"]:
+        unit, items = "recital", group["recital"]
+    elif (group["paragraph"] or group["point"] or group["section"]) and same_act:
         unit, items = block["unit"], [("one", block["number"])]
-        part = query["section"][0][1] if query["section"] else block["part"]
+        part = group["section"][0][1] if group["section"] else block["part"]
     else:
         return None
 
@@ -316,24 +303,25 @@ def resolve(query: dict, act: str, block: dict, index: Index) -> list[dict] | No
 
     # Paragraphs and points named in their own segments. A paragraph number
     # is sometimes bracketed: "paragraphs (3) to (9)".
+    paragraph_items = [(item[0], *(v.strip("()") for v in item[1:])) for item in group["paragraph"]]
     point_items = []
-    paragraph_items = [tuple(v.strip("()") if i else v for i, v in enumerate(item)) for item in query["paragraph"]]
-    for item in query["point"]:
+    for item in group["point"]:
         if item[0] == "range":
-            numbered = item[1][0].isdigit() or item[1].startswith("(") and item[1][1].isdigit()
-            target = paragraph_items if numbered else point_items
-            target.append(("range", *(address(v)[0] or address(v)[1] for v in item[1:])))
+            # A range of numbered points is a range of paragraphs: "points 1 to 3".
+            (first_paragraph, first_point), (last_paragraph, last_point) = address(item[1]), address(item[2])
+            if first_paragraph:
+                paragraph_items.append(("range", first_paragraph, last_paragraph))
+            else:
+                point_items.append(("range", first_point, last_point))
             continue
         paragraph, point = address(item[1])
-        if paragraph and not point:
+        if paragraph:
             paragraph_items.append(("one", paragraph))
-        else:
-            if paragraph:
-                paragraph_items.append(("one", paragraph))
+        if point:
             point_items.append(("one", point))
 
     # A bare "point (a)" is in the block's own paragraph.
-    relative = not (query["article"] or query["annex"] or query["recital"])
+    relative = not (group["article"] or group["annex"] or group["recital"])
     if relative and point_items and not paragraph_items and block["paragraph"]:
         paragraph_items = [("one", block["paragraph"])]
 
@@ -358,7 +346,7 @@ def resolve(query: dict, act: str, block: dict, index: Index) -> list[dict] | No
                             key = (act, unit, number, part, paragraph, point)
                             if key not in index.units:
                                 return None
-                            targets.append(dict(zip(("act", "unit", "number", "part", "paragraph", "point"), key)))
+                            targets.append(dict(zip(LOCATION, key)))
     return targets
 
 
@@ -372,7 +360,7 @@ def column_acts(block: dict) -> list[str] | None:
     acts = []
     for cell in header:
         if m := ACT_MENTION.search(cell):
-            acts.append(CORPUS_NUMBERS.get(m.group("number"), "outside"))
+            acts.append(KEY_BY_NUMBER.get(m.group("number"), "outside"))
         elif re.match(r"^This (Regulation|Directive)$", cell.strip()):
             acts.append(block["act"])
         else:
@@ -387,7 +375,7 @@ def find_refs(block: dict, index: Index) -> list[dict]:
     # column it sits in.
     default = block["act"]
     if block["unit"] == "article" and (m := AMENDS.match(block["title"] or "")):
-        default = CORPUS_NUMBERS.get(m.group("number"), "outside")
+        default = KEY_BY_NUMBER.get(m.group("number"), "outside")
     pieces = [(block["text"], default)]
     if block["kind"] == "table" and (acts := column_acts(block)):
         rows = [row.split(" | ") for row in block["text"].split("\n")[1:]]
@@ -400,57 +388,43 @@ def find_refs(block: dict, index: Index) -> list[dict]:
 
 
 def find_refs_in(text: str, default: str, block: dict, index: Index) -> list[dict]:
+    """References in one piece of a block, with `default` as the act when
+    a reference names none."""
     mentions = [(m.start(), m.group("kind"), m.group("number")) for m in ACT_MENTION.finditer(text)]
     records = []
     for m in REFERENCE.finditer(text):
         groups = [g for g in read_chain(m.group("chain")) if any(g.values())]
         if not groups:
             continue  # "this Article" or "the first subparagraph" alone
-        record = {"seq": block["seq"], "source": block["cite"], "text": m.group().strip(" ,"), "status": "", "targets": []}
         act = find_act(m, block, mentions, default)
+        targets = []
         if block["quoted"]:
-            record["status"] = "in_quote"
+            status = "in_quote"
         elif act == "outside":
-            record["status"] = "outside_corpus"
+            status = "outside_corpus"
         elif act == "unknown":
-            record["status"] = "unresolved"
+            status = "unresolved"
         else:
             # Every group must resolve, or the reference as a whole does not.
             resolved = [resolve(group, act, block, index) for group in groups]
-            if all(resolved):
-                record["status"] = "resolved"
-                record["targets"] = [t for targets in resolved for t in targets]
-            else:
-                record["status"] = "unresolved"
-        records.append(record)
+            status = "resolved" if all(resolved) else "unresolved"
+            if status == "resolved":
+                targets = [t for group_targets in resolved for t in group_targets]
+        records.append({"seq": block["seq"], "source": block["cite"], "text": m.group().strip(" ,"),
+                        "status": status, "targets": targets})
     return records
 
 
 def main() -> None:
     OUT_DIR.mkdir(parents=True, exist_ok=True)
-    acts = [act for act, _, _ in ACTS.values()]
-    blocks = {act: [json.loads(line) for line in open(UNITS_DIR / f"{act}.jsonl")] for act in acts}
-    index = Index([b for act in acts for b in blocks[act]])
-
-    problems = []
-    for act in acts:
-        refs = [r for b in blocks[act] for r in find_refs(b, index)]
-        with open(OUT_DIR / f"{act}.jsonl", "w") as f:
+    blocks = {act.key: [json.loads(line) for line in open(UNITS_DIR / f"{act.key}.jsonl")] for act in ACTS}
+    index = Index([b for act_blocks in blocks.values() for b in act_blocks])
+    for key, act_blocks in blocks.items():
+        refs = [r for b in act_blocks for r in find_refs(b, index)]
+        with open(OUT_DIR / f"{key}.jsonl", "w") as f:
             for r in refs:
                 f.write(json.dumps(r, ensure_ascii=False) + "\n")
-        print(f"{act}: {len(refs)} references, {dict(Counter(r['status'] for r in refs))}")
-        # Every resolved target must exist. resolve() only builds existing
-        # targets, so a failure here is a bug in this module.
-        for r in refs:
-            for t in r["targets"]:
-                key = (t["act"], t["chapter"], t["section"]) if "chapter" in t else tuple(t.values())
-                if key not in (index.chapters if "chapter" in t else index.units):
-                    problems.append(f"{r['source']}: target {t} does not exist")
-
-    for problem in problems:
-        print("PROBLEM", problem)
-    if problems:
-        sys.exit(1)
+        print(f"{key}: {len(refs)} references, {dict(Counter(r['status'] for r in refs))}")
 
 
 if __name__ == "__main__":

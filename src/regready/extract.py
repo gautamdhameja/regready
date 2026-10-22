@@ -25,6 +25,8 @@ CORPUS_DIR = Path("corpus")
 OUT_DIR = Path("data/extracted")
 
 # The PDFs have a text layer, so OCR only adds time and misreads.
+DO_OCR = False
+
 # Egret Large kept a sentence that the default layout model dropped.
 LAYOUT_MODEL = DOCLING_LAYOUT_EGRET_LARGE
 
@@ -34,7 +36,7 @@ DO_CELL_MATCHING = False
 
 def make_converter() -> DocumentConverter:
     options = PdfPipelineOptions(
-        do_ocr=False,
+        do_ocr=DO_OCR,
         layout_options=LayoutOptions(model_spec=LAYOUT_MODEL),
         table_structure_options=TableStructureOptions(do_cell_matching=DO_CELL_MATCHING),
     )
@@ -53,7 +55,7 @@ def extract(pdf: Path, converter: DocumentConverter) -> None:
         "source_sha256": hashlib.sha256(pdf.read_bytes()).hexdigest(),
         "docling_version": version("docling"),
         "layout_model": LAYOUT_MODEL.name,
-        "do_ocr": False,
+        "do_ocr": DO_OCR,
         "do_cell_matching": DO_CELL_MATCHING,
         "extracted_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
